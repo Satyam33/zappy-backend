@@ -1,0 +1,321 @@
+{
+  "info": {
+    "name": "Zappy Backend API",
+    "_postman_id": "7d8e4c56-6f1e-49f7-b4ee-bf0b2f6a1d51",
+    "description": "Module-wise API collection for frontend integration. Includes sample payloads, params, and expected outputs.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:4000" },
+    { "key": "accessToken", "value": "" },
+    { "key": "refreshToken", "value": "" },
+    { "key": "orgId", "value": "00000000-0000-0000-0000-000000000001" },
+    { "key": "otpId", "value": "" },
+    { "key": "resetToken", "value": "" },
+    { "key": "conversationId", "value": "00000000-0000-0000-0000-000000000010" },
+    { "key": "campaignId", "value": "00000000-0000-0000-0000-000000000020" },
+    { "key": "templateId", "value": "00000000-0000-0000-0000-000000000030" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "description": "Authentication, OTP signup verification, token lifecycle, password recovery.",
+      "item": [
+        {
+          "name": "Signup OTP Request",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/signup/otp/request", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "signup", "otp", "request"] },
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"owner@acme.com\",\n  \"mobile\": \"+919999999999\"\n}" },
+            "description": "Requests OTP for signup. Validates both email and mobile uniqueness. In non-production, OTP code may be included in response."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"ok\": true,\n  \"otpId\": \"2d2b95a1-f6c5-475d-aad6-157f3029c0f5\",\n  \"expiresAt\": \"2026-03-24T12:12:00.000Z\",\n  \"otpCode\": \"123456\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Signup OTP Verify",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/signup/otp/verify", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "signup", "otp", "verify"] },
+            "body": { "mode": "raw", "raw": "{\n  \"otpId\": \"{{otpId}}\",\n  \"mobile\": \"+919999999999\",\n  \"otpCode\": \"123456\"\n}" },
+            "description": "Verifies OTP. Must be done before signup."
+          },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "body": "{\n  \"ok\": true\n}" }]
+        },
+        {
+          "name": "Signup",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/signup", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "signup"] },
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"owner@acme.com\",\n  \"mobile\": \"+919999999999\",\n  \"password\": \"StrongPass123\",\n  \"name\": \"Acme Owner\",\n  \"organizationName\": \"Acme\",\n  \"otpId\": \"{{otpId}}\"\n}" },
+            "description": "Creates user + organization + org admin membership."
+          },
+          "response": [{ "name": "201 Created", "status": "Created", "code": 201, "body": "{\n  \"ok\": true,\n  \"user\": {\n    \"id\": \"...\",\n    \"email\": \"owner@acme.com\",\n    \"mobile\": \"+919999999999\",\n    \"name\": \"Acme Owner\"\n  },\n  \"organization\": {\n    \"id\": \"...\",\n    \"name\": \"Acme\"\n  },\n  \"membership\": {\n    \"role\": \"admin\"\n  }\n}" }]
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "login"] },
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"owner@acme.com\",\n  \"password\": \"StrongPass123\"\n}" }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.accessToken) pm.collectionVariables.set('accessToken', json.accessToken);",
+                  "if (json.refreshToken) pm.collectionVariables.set('refreshToken', json.refreshToken);"
+                ]
+              }
+            }
+          ],
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "body": "{\n  \"ok\": true,\n  \"accessToken\": \"...\",\n  \"refreshToken\": \"...\"\n}" }]
+        },
+        {
+          "name": "Refresh",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/refresh", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "refresh"] },
+            "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}" }
+          },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "body": "{\n  \"ok\": true,\n  \"accessToken\": \"...\",\n  \"refreshToken\": \"...\"\n}" }]
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/logout", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "logout"] },
+            "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}" }
+          },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "body": "{\n  \"ok\": true\n}" }]
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/forgot-password", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "forgot-password"] },
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"owner@acme.com\"\n}" }
+          },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "body": "{\n  \"ok\": true\n}" }]
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/reset-password", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "reset-password"] },
+            "body": { "mode": "raw", "raw": "{\n  \"token\": \"{{resetToken}}\",\n  \"password\": \"NewStrongPass123\"\n}" }
+          },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "body": "{\n  \"ok\": true\n}" }]
+        }
+      ]
+    },
+    {
+      "name": "Contacts",
+      "item": [
+        {
+          "name": "Get Contacts",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "x-org-id", "value": "{{orgId}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/contacts?page=1&limit=25&search=&tag=&opted_in=",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "contacts"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "25" },
+                { "key": "search", "value": "" },
+                { "key": "tag", "value": "" },
+                { "key": "opted_in", "value": "" }
+              ]
+            }
+          },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "body": "{\n  \"data\": []\n}" }]
+        }
+      ]
+    },
+    {
+      "name": "Campaigns",
+      "item": [
+        {
+          "name": "Get Campaigns",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "x-org-id", "value": "{{orgId}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/campaigns?status=&page=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "campaigns"],
+              "query": [
+                { "key": "status", "value": "" },
+                { "key": "page", "value": "1" }
+              ]
+            }
+          },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "body": "{\n  \"data\": []\n}" }]
+        }
+      ]
+    },
+    {
+      "name": "Templates",
+      "item": [
+        {
+          "name": "Get Templates",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "x-org-id", "value": "{{orgId}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/templates?category=&status=",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "templates"],
+              "query": [
+                { "key": "category", "value": "" },
+                { "key": "status", "value": "" }
+              ]
+            }
+          },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "body": "{\n  \"data\": []\n}" }]
+        }
+      ]
+    },
+    {
+      "name": "Inbox",
+      "item": [
+        {
+          "name": "Get Conversations",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "x-org-id", "value": "{{orgId}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/conversations?status=&page=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "conversations"],
+              "query": [
+                { "key": "status", "value": "" },
+                { "key": "page", "value": "1" }
+              ]
+            }
+          },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "body": "{\n  \"data\": []\n}" }]
+        }
+      ]
+    },
+    {
+      "name": "Analytics",
+      "item": [
+        {
+          "name": "Summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "x-org-id", "value": "{{orgId}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/analytics/summary?range=7d",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "analytics", "summary"],
+              "query": [{ "key": "range", "value": "7d" }]
+            }
+          },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "body": "{\n  \"data\": {\n    \"range\": \"7d\",\n    \"messages\": 0,\n    \"campaigns\": 0\n  }\n}" }]
+        }
+      ]
+    },
+    {
+      "name": "Billing",
+      "item": [
+        {
+          "name": "Usage",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "x-org-id", "value": "{{orgId}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/billing/usage", "host": ["{{baseUrl}}"], "path": ["api", "v1", "billing", "usage"] }
+          },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "body": "{\n  \"data\": {\n    \"plan\": \"starter\",\n    \"messagesUsed\": 0\n  }\n}" }]
+        }
+      ]
+    },
+    {
+      "name": "Settings",
+      "item": [
+        {
+          "name": "WhatsApp Settings",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "x-org-id", "value": "{{orgId}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/settings/whatsapp", "host": ["{{baseUrl}}"], "path": ["api", "v1", "settings", "whatsapp"] }
+          },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "body": "{\n  \"data\": {\n    \"qualityRating\": \"GREEN\",\n    \"messagingLimit\": \"TIER_1\"\n  }\n}" }]
+        }
+      ]
+    },
+    {
+      "name": "Webhook",
+      "item": [
+        {
+          "name": "Meta Verify Webhook",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/webhook/whatsapp?hub.mode=subscribe&hub.verify_token=zappy-webhook-token&hub.challenge=123456",
+              "host": ["{{baseUrl}}"],
+              "path": ["webhook", "whatsapp"],
+              "query": [
+                { "key": "hub.mode", "value": "subscribe" },
+                { "key": "hub.verify_token", "value": "zappy-webhook-token" },
+                { "key": "hub.challenge", "value": "123456" }
+              ]
+            }
+          },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "body": "123456" }]
+        },
+        {
+          "name": "Meta Incoming Event",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/webhook/whatsapp", "host": ["{{baseUrl}}"], "path": ["webhook", "whatsapp"] },
+            "body": { "mode": "raw", "raw": "{\n  \"entry\": []\n}" }
+          },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "body": "" }]
+        }
+      ]
+    }
+  ]
+}
