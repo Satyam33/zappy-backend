@@ -247,7 +247,13 @@ export class AuthService {
     return { ok: true, ...result };
   }
 
-  async login(input: unknown): Promise<{ ok: boolean; accessToken: string; refreshToken: string }> {
+  async login(input: unknown): Promise<{
+    ok: boolean;
+    accessToken: string;
+    refreshToken: string;
+    user: { id: string; email: string; name: string | null; role: string };
+    organization: { id: string; name: string };
+  }> {
     const payload = LoginSchema.parse(input);
     const user = await db("users").where({ email: payload.email.toLowerCase() }).first();
 
@@ -270,13 +276,44 @@ export class AuthService {
     const refreshToken = signRefreshToken(user.id);
     const refreshTokenHash = await bcrypt.hash(refreshToken, 10);
 
+    const membership = await db("org_members")
+      .join("organizations", "org_members.org_id", "organizations.id")
+      .where("org_members.user_id", user.id)
+      .select(
+        "org_members.role as role",
+        "organizations.id as organizationId",
+        "organizations.name as organizationName"
+      )
+      .first();
+
+    if (!membership) {
+      throw Object.assign(new Error("No organization membership found"), {
+        status: 403,
+        code: "AUTH_NO_ORG_MEMBERSHIP"
+      });
+    }
+
     await db("refresh_tokens").insert({
       user_id: user.id,
       token_hash: refreshTokenHash,
       expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
     });
 
-    return { ok: true, accessToken, refreshToken };
+    return {
+      ok: true,
+      accessToken,
+      refreshToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: membership.role
+      },
+      organization: {
+        id: membership.organizationId,
+        name: membership.organizationName
+      }
+    };
   }
 
   async refresh(input: unknown): Promise<{ ok: boolean; accessToken: string; refreshToken: string }> {
