@@ -20,14 +20,31 @@ import { authRoutes } from "./modules/auth/auth.routes";
 
 export const app = express();
 
+const allowedOrigins = new Set(
+  [
+    env.APP_URL,
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "https://zappy-frontend-agent.vercel.app",
+    ...(env.CORS_ORIGINS?.split(",").map(origin => origin.trim()).filter(Boolean) ?? [])
+  ]
+);
+
 app.use(helmet());
 app.use(
   cors({
-    origin: env.APP_URL,
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.has(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(new Error(`CORS blocked for origin: ${origin}`));
+    },
     credentials: true
   })
 );
 app.use(express.json({ limit: "2mb" }));
+app.use(express.urlencoded({ extended: true }));
 app.use(morgan("dev"));
 app.use(requestLogger);
 
