@@ -14,3 +14,7 @@ templatesRoutes.post("/", (req, res) => {
 templatesRoutes.put("/:id", (req, res) => {
   void templatesController.update(req, res);
 });
+
+templatesRoutes.post("/sync-status", (req, res) => {
+  void templatesController.syncStatus(req, res);
+});

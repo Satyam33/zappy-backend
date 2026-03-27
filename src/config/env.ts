@@ -17,7 +17,8 @@ const EnvSchema = z.object({
   OTP_EXPIRY_MINUTES: z.coerce.number().int().positive().default(10),
   OTP_MAX_ATTEMPTS: z.coerce.number().int().positive().default(5),
   OTP_RESEND_COOLDOWN_SECONDS: z.coerce.number().int().positive().default(60),
-  WEBHOOK_VERIFY_TOKEN: z.string().min(1).default("zappy-webhook-token")
+  WEBHOOK_VERIFY_TOKEN: z.string().min(1).default("zappy-webhook-token"),
+  META_GRAPH_VERSION: z.string().default("v22.0")
 });
 
 export const env = EnvSchema.parse(process.env);

@@ -40,11 +40,41 @@ export class TemplatesRepository {
     return row;
   }
 
+  async findCustomById(input: { orgId: string; id: string }): Promise<Record<string, unknown> | null> {
+    return db("templates")
+      .where({ id: input.id, org_id: input.orgId, is_predefined: false })
+      .first();
+  }
+
+  async findForSync(input: { orgId: string; id?: string }): Promise<Array<Record<string, unknown>>> {
+    const query = db("templates")
+      .where({ org_id: input.orgId, is_predefined: false })
+      .whereIn("status", ["pending", "action_required", "approved"]);
+    if (input.id) query.andWhere({ id: input.id });
+    return query.select("*");
+  }
+
   async update(input: { orgId: string; id: string; patch: Record<string, unknown> }): Promise<Record<string, unknown> | null> {
     const [row] = await db("templates")
       .where({ id: input.id, org_id: input.orgId, is_predefined: false })
       .update({ ...input.patch, updated_at: new Date() })
       .returning("*");
     return row ?? null;
+  }
+
+  async updateByMetaOrName(input: {
+    orgId: string;
+    metaTemplateId?: string;
+    name?: string;
+    patch: Record<string, unknown>;
+  }): Promise<number> {
+    if (!input.metaTemplateId && !input.name) return 0;
+    const query = db("templates")
+      .where({ org_id: input.orgId, is_predefined: false })
+      .andWhere((qb) => {
+        if (input.metaTemplateId) qb.orWhere({ meta_template_id: input.metaTemplateId });
+        if (input.name) qb.orWhere({ name: input.name });
+      });
+    return query.update({ ...input.patch, updated_at: new Date() });
   }
 }

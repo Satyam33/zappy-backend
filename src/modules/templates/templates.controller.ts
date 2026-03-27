@@ -54,6 +54,18 @@ export class TemplatesController {
       this.sendError(res, err);
     }
   }
+
+  async syncStatus(req: Request, res: Response): Promise<void> {
+    try {
+      const data = await service.syncStatus({
+        orgId: this.ensureOrgId(req),
+        templateId: typeof req.body?.templateId === "string" ? req.body.templateId : undefined
+      });
+      this.sendSuccess(res, 200, "Template status synchronized", data);
+    } catch (err) {
+      this.sendError(res, err);
+    }
+  }
 }
 
 export const templatesController = new TemplatesController();
