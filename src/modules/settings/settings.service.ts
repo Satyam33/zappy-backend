@@ -14,6 +14,14 @@ const UpdateBusinessProfileSchema = z.object({
   optOutKeyword: z.string().min(1, "Opt-out keyword is required")
 });
 
+const UpdateWebhookSettingsSchema = z.object({
+  events: z.object({
+    messages: z.boolean(),
+    message_status: z.boolean(),
+    template_status: z.boolean()
+  })
+});
+
 type WhatsAppSettingsData = {
   phoneNumberId: string;
   wabaId: string;
@@ -39,8 +47,25 @@ type BusinessProfileData = {
   optOutKeyword: string;
 };
 
+type WebhookEvents = {
+  messages: boolean;
+  message_status: boolean;
+  template_status: boolean;
+};
+
+type WebhookSettingsData = {
+  webhookUrl: string;
+  verifyToken: string;
+  events: WebhookEvents;
+};
+
 export class SettingsService {
   private readonly whatsappService = new WhatsAppService();
+  private readonly defaultWebhookEvents: WebhookEvents = {
+    messages: true,
+    message_status: true,
+    template_status: false
+  };
 
   private async getOrganization(orgId: string): Promise<{
     id: string;
@@ -53,6 +78,7 @@ export class SettingsService {
     timezone: string;
     opt_out_keyword: string;
     category: string | null;
+    webhook_events: unknown;
   }> {
     const organization = await db("organizations")
       .where({ id: orgId })
@@ -66,7 +92,8 @@ export class SettingsService {
         "messaging_limit",
         "timezone",
         "opt_out_keyword",
-        "category"
+        "category",
+        "webhook_events"
       ])
       .first();
 
@@ -181,5 +208,47 @@ export class SettingsService {
       });
 
     return this.businessProfile(orgId);
+  }
+
+  private normalizeWebhookEvents(raw: unknown): WebhookEvents {
+    if (!raw || typeof raw !== "object") return this.defaultWebhookEvents;
+    const value = raw as Partial<WebhookEvents>;
+    return {
+      messages: Boolean(value.messages),
+      message_status: Boolean(value.message_status),
+      template_status: Boolean(value.template_status)
+    };
+  }
+
+  async webhookSettings(input: {
+    orgId: string;
+    webhookUrl: string;
+    verifyToken: string;
+  }): Promise<WebhookSettingsData> {
+    const organization = await this.getOrganization(input.orgId);
+    return {
+      webhookUrl: input.webhookUrl,
+      verifyToken: input.verifyToken,
+      events: this.normalizeWebhookEvents(organization.webhook_events)
+    };
+  }
+
+  async updateWebhookSettings(
+    orgId: string,
+    input: unknown,
+    readonlyData: { webhookUrl: string; verifyToken: string }
+  ): Promise<WebhookSettingsData> {
+    const payload = UpdateWebhookSettingsSchema.parse(input);
+    await this.getOrganization(orgId);
+
+    await db("organizations")
+      .where({ id: orgId })
+      .update({ webhook_events: JSON.stringify(payload.events) });
+
+    return this.webhookSettings({
+      orgId,
+      webhookUrl: readonlyData.webhookUrl,
+      verifyToken: readonlyData.verifyToken
+    });
   }
 }

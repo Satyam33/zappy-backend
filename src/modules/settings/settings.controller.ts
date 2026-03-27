@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import { ZodError } from "zod";
+import { env } from "../../config/env";
 import { SettingsService } from "./settings.service";
 
 const service = new SettingsService();
@@ -35,6 +36,16 @@ export class SettingsController {
       throw Object.assign(new Error("No organization context"), { status: 403 });
     }
     return req.orgId;
+  }
+
+  private getWebhookUrl(req: Request): string {
+    const forwardedProto = typeof req.headers["x-forwarded-proto"] === "string"
+      ? req.headers["x-forwarded-proto"].split(",")[0]
+      : undefined;
+    const protocol = forwardedProto || req.protocol || "https";
+    const host = req.get("host");
+    if (host) return `${protocol}://${host}/webhook/whatsapp`;
+    return `${env.APP_URL}/webhook/whatsapp`;
   }
 
   async whatsapp(req: Request, res: Response): Promise<void> {
@@ -82,6 +93,33 @@ export class SettingsController {
       const orgId = this.ensureOrgId(req);
       const data = await service.updateBusinessProfile(orgId, req.body);
       this.sendSuccess(res, 200, "Business profile updated", data);
+    } catch (err) {
+      this.sendError(res, err);
+    }
+  }
+
+  async webhook(req: Request, res: Response): Promise<void> {
+    try {
+      const orgId = this.ensureOrgId(req);
+      const data = await service.webhookSettings({
+        orgId,
+        webhookUrl: this.getWebhookUrl(req),
+        verifyToken: env.WEBHOOK_VERIFY_TOKEN
+      });
+      this.sendSuccess(res, 200, "Webhook settings fetched", data);
+    } catch (err) {
+      this.sendError(res, err);
+    }
+  }
+
+  async updateWebhook(req: Request, res: Response): Promise<void> {
+    try {
+      const orgId = this.ensureOrgId(req);
+      const data = await service.updateWebhookSettings(orgId, req.body, {
+        webhookUrl: this.getWebhookUrl(req),
+        verifyToken: env.WEBHOOK_VERIFY_TOKEN
+      });
+      this.sendSuccess(res, 200, "Webhook settings updated", data);
     } catch (err) {
       this.sendError(res, err);
     }

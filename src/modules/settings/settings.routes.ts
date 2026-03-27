@@ -22,3 +22,11 @@ settingsRoutes.get("/profile", (req, res) => {
 settingsRoutes.put("/profile", (req, res) => {
   void settingsController.updateProfile(req, res);
 });
+
+settingsRoutes.get("/webhook", (req, res) => {
+  void settingsController.webhook(req, res);
+});
+
+settingsRoutes.put("/webhook", (req, res) => {
+  void settingsController.updateWebhook(req, res);
+});
