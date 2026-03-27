@@ -23,7 +23,7 @@ export class WhatsAppService {
     const url = new URL(`${this.graphBaseUrl}/${encodeURIComponent(phoneNumberId)}`);
     url.searchParams.set(
       "fields",
-      "verified_name,quality_rating,messaging_limit,display_phone_number"
+      "verified_name,quality_rating,display_phone_number"
     );
     url.searchParams.set("access_token", accessToken);
         console.log("WhatsApp API status check url:", url.toString());
@@ -31,7 +31,7 @@ export class WhatsAppService {
       method: "GET",
       headers: { Accept: "application/json" }
     });
-    console.log("WhatsApp API status check response status:", response);
+    
     const json = (await response.json()) as {
       verified_name?: string;
       quality_rating?: string;

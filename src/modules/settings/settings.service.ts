@@ -91,7 +91,6 @@ export class SettingsService {
 
   async whatsappConnectionStatus(orgId: string): Promise<WhatsAppStatusData> {
     const organization = await this.getOrganization(orgId);
-
     if (!organization.access_token || !organization.phone_number_id) {
       return {
         connected: false,
