@@ -66,6 +66,26 @@ export class SettingsController {
       this.sendError(res, err);
     }
   }
+
+  async profile(req: Request, res: Response): Promise<void> {
+    try {
+      const orgId = this.ensureOrgId(req);
+      const data = await service.businessProfile(orgId);
+      this.sendSuccess(res, 200, "Business profile fetched", data);
+    } catch (err) {
+      this.sendError(res, err);
+    }
+  }
+
+  async updateProfile(req: Request, res: Response): Promise<void> {
+    try {
+      const orgId = this.ensureOrgId(req);
+      const data = await service.updateBusinessProfile(orgId, req.body);
+      this.sendSuccess(res, 200, "Business profile updated", data);
+    } catch (err) {
+      this.sendError(res, err);
+    }
+  }
 }
 
 export const settingsController = new SettingsController();

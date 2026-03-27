@@ -8,6 +8,12 @@ const UpdateWhatsAppSettingsSchema = z.object({
   accessToken: z.string().min(10, "Access token is required")
 });
 
+const UpdateBusinessProfileSchema = z.object({
+  category: z.string().min(1, "Category is required"),
+  timezone: z.string().min(1, "Timezone is required"),
+  optOutKeyword: z.string().min(1, "Opt-out keyword is required")
+});
+
 type WhatsAppSettingsData = {
   phoneNumberId: string;
   wabaId: string;
@@ -25,26 +31,42 @@ type WhatsAppStatusData = {
   statusMessage: string;
 };
 
+type BusinessProfileData = {
+  businessName: string;
+  displayPhone: string;
+  category: string;
+  timezone: string;
+  optOutKeyword: string;
+};
+
 export class SettingsService {
   private readonly whatsappService = new WhatsAppService();
 
   private async getOrganization(orgId: string): Promise<{
     id: string;
+    name: string;
     waba_id: string | null;
     phone_number_id: string | null;
     access_token: string | null;
     quality_rating: string;
     messaging_limit: string;
+    timezone: string;
+    opt_out_keyword: string;
+    category: string | null;
   }> {
     const organization = await db("organizations")
       .where({ id: orgId })
       .select([
         "id",
+        "name",
         "waba_id",
         "phone_number_id",
         "access_token",
         "quality_rating",
-        "messaging_limit"
+        "messaging_limit",
+        "timezone",
+        "opt_out_keyword",
+        "category"
       ])
       .first();
 
@@ -115,5 +137,49 @@ export class SettingsService {
       });
 
     return status;
+  }
+
+  async businessProfile(orgId: string): Promise<BusinessProfileData> {
+    const organization = await this.getOrganization(orgId);
+    let businessNameFromMeta = "";
+    let displayPhoneFromMeta = "";
+    
+    if (organization.access_token && organization.phone_number_id) {
+      try {
+        const status = await this.whatsappService.getConnectionStatus({
+          accessToken: organization.access_token,
+          phoneNumberId: organization.phone_number_id
+        });
+        
+        businessNameFromMeta = status.verifiedName ?? "";
+        displayPhoneFromMeta = status.displayPhoneNumber ?? "";
+      } catch {
+        // Keep profile endpoint resilient even when Meta API is unavailable.
+      }
+    }
+
+    return {
+      businessName: businessNameFromMeta || organization.name,
+      displayPhone: displayPhoneFromMeta,
+      category: organization.category ?? "Other",
+      timezone: organization.timezone ?? "Asia/Kolkata",
+      optOutKeyword: organization.opt_out_keyword ?? "STOP"
+    };
+  }
+
+  async updateBusinessProfile(orgId: string, input: unknown): Promise<BusinessProfileData> {
+    const payload = UpdateBusinessProfileSchema.parse(input);
+
+    await this.getOrganization(orgId);
+
+    await db("organizations")
+      .where({ id: orgId })
+      .update({
+        category: payload.category.trim(),
+        timezone: payload.timezone.trim(),
+        opt_out_keyword: payload.optOutKeyword.trim()
+      });
+
+    return this.businessProfile(orgId);
   }
 }
