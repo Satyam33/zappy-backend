@@ -121,6 +121,40 @@ export class WhatsAppService {
     return list.filter((item) => item.name && nameSet.has(item.name));
   }
 
+  async sendTemplateMessage(input: {
+    accessToken: string;
+    phoneNumberId: string;
+    to: string;
+    templateName: string;
+    language: string;
+    bodyParameters: string[];
+  }): Promise<{ messages?: Array<{ id?: string }> }> {
+    return this.graphRequest<{ messages?: Array<{ id?: string }> }>({
+      method: "POST",
+      path: `${encodeURIComponent(input.phoneNumberId)}/messages`,
+      accessToken: input.accessToken,
+      body: {
+        messaging_product: "whatsapp",
+        to: input.to,
+        type: "template",
+        template: {
+          name: input.templateName,
+          language: { code: input.language || "en" },
+          ...(input.bodyParameters.length
+            ? {
+                components: [
+                  {
+                    type: "body",
+                    parameters: input.bodyParameters.map((value) => ({ type: "text", text: value }))
+                  }
+                ]
+              }
+            : {})
+        }
+      }
+    });
+  }
+
   async getConnectionStatus(input: {
     accessToken: string;
     phoneNumberId: string;
