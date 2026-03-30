@@ -7,6 +7,9 @@ type ListFilters = {
   status?: string;
   source?: "predefined" | "custom";
   search?: string;
+  createdFrom?: string;
+  createdTo?: string;
+  sortOrder?: "asc" | "desc";
 };
 
 export class TemplatesRepository {
@@ -24,11 +27,17 @@ export class TemplatesRepository {
         qb.whereILike("name", `%${filters.search}%`).orWhereILike("body", `%${filters.search}%`);
       });
     }
+    if (filters.createdFrom) {
+      query.andWhere("created_at", ">=", filters.createdFrom);
+    }
+    if (filters.createdTo) {
+      query.andWhere("created_at", "<=", filters.createdTo);
+    }
 
     const countRow = await query.clone().count<{ count: string }>("id as count").first();
     const rows = await query
       .clone()
-      .orderBy("created_at", "desc")
+      .orderBy("created_at", filters.sortOrder ?? "desc")
       .limit(filters.limit)
       .offset(offset);
 

@@ -44,7 +44,10 @@ const ListTemplatesSchema = z.object({
   limit: z.coerce.number().int().positive().max(100).default(12),
   status: z.enum(["draft", "pending", "approved", "action_required"]).optional(),
   source: z.enum(["predefined", "custom"]).optional(),
-  search: z.string().optional()
+  search: z.string().optional(),
+  created_from: z.string().datetime().optional(),
+  created_to: z.string().datetime().optional(),
+  sort_order: z.enum(["asc", "desc"]).default("desc")
 });
 
 const TemplateTypeEnum = z.enum([
@@ -150,7 +153,10 @@ export class TemplatesService {
       limit: query.limit,
       status: query.status,
       source: "custom",
-      search: query.search?.trim() || undefined
+      search: query.search?.trim() || undefined,
+      createdFrom: query.created_from,
+      createdTo: query.created_to,
+      sortOrder: query.sort_order
     });
     return {
       items: rows.map((row) => this.normalizeTemplate(row)),
