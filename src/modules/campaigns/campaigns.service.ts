@@ -21,6 +21,12 @@ const CreateCampaignSchema = z.object({
   scheduledAt: z.string().optional()
 });
 
+const ListCampaignsSchema = z.object({
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().positive().max(100).default(10),
+  search: z.string().optional()
+});
+
 export class CampaignsService {
   private normalizeCampaign(row: Record<string, unknown>): Record<string, unknown> {
     return {
@@ -59,9 +65,30 @@ export class CampaignsService {
     return { phoneNumberId: String(org.phone_number_id), accessToken: String(org.access_token) };
   }
 
-  async list(input: { orgId: string }): Promise<Array<Record<string, unknown>>> {
-    const rows = await repository.findAll({ orgId: input.orgId });
-    return rows.map((row) => this.normalizeCampaign(row));
+  async list(input: {
+    orgId: string;
+    query: unknown;
+  }): Promise<{
+    items: Array<Record<string, unknown>>;
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
+    const query = ListCampaignsSchema.parse(input.query);
+    const { rows, total } = await repository.findAll({
+      orgId: input.orgId,
+      page: query.page,
+      limit: query.limit,
+      search: query.search?.trim() || undefined
+    });
+    return {
+      items: rows.map((row) => this.normalizeCampaign(row)),
+      total,
+      page: query.page,
+      limit: query.limit,
+      totalPages: Math.max(1, Math.ceil(total / query.limit))
+    };
   }
 
   async meta(input: { orgId: string }): Promise<Record<string, unknown>> {

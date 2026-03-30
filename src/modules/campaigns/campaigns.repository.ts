@@ -6,10 +6,26 @@ type AudienceInput =
   | { mode: "ids"; ids: string[] };
 
 export class CampaignsRepository {
-  async findAll(input: { orgId: string }): Promise<Array<Record<string, unknown>>> {
-    return db("campaigns")
-      .where({ org_id: input.orgId })
-      .orderBy("created_at", "desc");
+  async findAll(input: {
+    orgId: string;
+    page: number;
+    limit: number;
+    search?: string;
+  }): Promise<{ rows: Array<Record<string, unknown>>; total: number }> {
+    const offset = (input.page - 1) * input.limit;
+    const query = db("campaigns").where({ org_id: input.orgId });
+    if (input.search) {
+      query.andWhere((qb) => {
+        qb.whereILike("name", `%${input.search}%`).orWhereILike("template_name", `%${input.search}%`);
+      });
+    }
+    const countRow = await query.clone().count<{ count: string }>("id as count").first();
+    const rows = await query
+      .clone()
+      .orderBy("created_at", "desc")
+      .limit(input.limit)
+      .offset(offset);
+    return { rows, total: Number(countRow?.count ?? 0) };
   }
 
   async findApprovedTemplates(input: { orgId: string }): Promise<Array<Record<string, unknown>>> {

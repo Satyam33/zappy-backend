@@ -26,7 +26,10 @@ export class CampaignsController {
 
   async list(req: Request, res: Response): Promise<void> {
     try {
-      const data = await service.list({ orgId: this.ensureOrgId(req) });
+      const data = await service.list({
+        orgId: this.ensureOrgId(req),
+        query: req.query
+      });
       this.sendSuccess(res, 200, "Campaigns fetched", data);
     } catch (err) {
       this.sendError(res, err);
