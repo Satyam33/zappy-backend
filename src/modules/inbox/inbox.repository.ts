@@ -125,13 +125,13 @@ export class InboxRepository {
     const searchRaw = input.search?.trim() || "";
     const digits = this.normalizeDigits(searchRaw);
 
-    const base = db("conversations").where({ org_id: input.orgId });
-    if (input.status && input.status !== "all") base.andWhere({ status: input.status });
+    const base = db("conversations").where("conversations.org_id", input.orgId);
+    if (input.status && input.status !== "all") base.andWhere("conversations.status", input.status);
     if (searchRaw) {
       const s = `%${searchRaw}%`;
       base.andWhere((qb) => {
-        qb.whereILike("last_message_preview", s);
-        if (digits.length >= 4) qb.orWhereILike("contact_phone", `%${digits}%`);
+        qb.whereILike("conversations.last_message_preview", s);
+        if (digits.length >= 4) qb.orWhereILike("conversations.contact_phone", `%${digits}%`);
         qb.orWhereExists(
           db("contacts")
             .select(1)
