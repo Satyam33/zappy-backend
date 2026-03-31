@@ -1,7 +1,9 @@
 import { wsManager } from "../../websocket/ws.manager";
 import { TemplatesService } from "../templates/templates.service";
+import { InboxService } from "../inbox/inbox.service";
 
 const templatesService = new TemplatesService();
+const inboxService = new InboxService();
 
 export class WebhookProcessor {
   private async processTemplateStatusUpdate(orgId: string, payload: Record<string, unknown>): Promise<void> {
@@ -42,6 +44,7 @@ export class WebhookProcessor {
   async process(orgId: string, payload: Record<string, unknown>): Promise<void> {
     if (orgId !== "unknown-org") {
       await this.processTemplateStatusUpdate(orgId, payload);
+      await inboxService.processWebhook(orgId, payload);
     }
     wsManager.sendToOrg(orgId, {
       type: "WEBHOOK_EVENT",

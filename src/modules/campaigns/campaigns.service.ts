@@ -2,9 +2,11 @@ import { CampaignsRepository } from "./campaigns.repository";
 import { z } from "zod";
 import { db } from "../../config/database";
 import { WhatsAppService } from "../../services/whatsapp.service";
+import { InboxService } from "../inbox/inbox.service";
 
 const repository = new CampaignsRepository();
 const whatsappService = new WhatsAppService();
+const inboxService = new InboxService();
 
 const AudienceSchema = z.union([
   z.object({ mode: z.literal("all") }),
@@ -181,13 +183,26 @@ export class CampaignsService {
         const bodyParameters = variables.map((v) =>
           this.resolveParamValue(payload.parameterMapping[v] || "", contact)
         );
-        await whatsappService.sendTemplateMessage({
+        const sendResult = await whatsappService.sendTemplateMessage({
           accessToken: cfg.accessToken,
           phoneNumberId: cfg.phoneNumberId,
           to: contact.phone,
           templateName: String(template.name),
           language: String(template.language || "en"),
           bodyParameters
+        });
+        let preview = String(template.body);
+        variables.forEach((v, idx) => {
+          preview = preview.replaceAll(`{{${v}}}`, bodyParameters[idx] ?? "");
+        });
+        const previewText = `[Campaign: ${payload.name}] ${String(template.name)}: ${preview}`.slice(0, 2000);
+        await inboxService.appendOutboundCampaignMessage({
+          orgId: input.orgId,
+          toPhoneRaw: contact.phone,
+          wamid: sendResult.messages?.[0]?.id,
+          preview: previewText,
+          campaignId: String(created.id),
+          templateName: String(template.name)
         });
         sent += 1;
       } catch {

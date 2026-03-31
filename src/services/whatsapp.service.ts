@@ -10,6 +10,10 @@ type WhatsAppConnectionStatus = {
 export class WhatsAppService {
   private readonly graphBaseUrl = `https://graph.facebook.com/${process.env.META_GRAPH_VERSION || "v22.0"}`;
 
+  normalizeRecipientPhone(raw: string): string {
+    return String(raw).replace(/\D/g, "");
+  }
+
   async sendTemplate(): Promise<{ ok: boolean }> {
     return { ok: true };
   }
@@ -129,13 +133,14 @@ export class WhatsAppService {
     language: string;
     bodyParameters: string[];
   }): Promise<{ messages?: Array<{ id?: string }> }> {
+    const to = this.normalizeRecipientPhone(input.to);
     return this.graphRequest<{ messages?: Array<{ id?: string }> }>({
       method: "POST",
       path: `${encodeURIComponent(input.phoneNumberId)}/messages`,
       accessToken: input.accessToken,
       body: {
         messaging_product: "whatsapp",
-        to: input.to,
+        to,
         type: "template",
         template: {
           name: input.templateName,
@@ -151,6 +156,29 @@ export class WhatsAppService {
               }
             : {})
         }
+      }
+    });
+  }
+
+  async sendTextMessage(input: {
+    accessToken: string;
+    phoneNumberId: string;
+    to: string;
+    text: string;
+  }): Promise<{ messages?: Array<{ id?: string }> }> {
+    const to = this.normalizeRecipientPhone(input.to);
+    if (!to || to.length < 8) {
+      throw Object.assign(new Error("Invalid recipient phone"), { status: 400 });
+    }
+    return this.graphRequest<{ messages?: Array<{ id?: string }> }>({
+      method: "POST",
+      path: `${encodeURIComponent(input.phoneNumberId)}/messages`,
+      accessToken: input.accessToken,
+      body: {
+        messaging_product: "whatsapp",
+        to,
+        type: "text",
+        text: { preview_url: false, body: input.text }
       }
     });
   }
